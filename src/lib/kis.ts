@@ -732,6 +732,98 @@ export async function getTotalTradingValue(): Promise<{
 }
 
 // ============================================================
+// 일봉 (과거 종가) 조회
+// ============================================================
+
+/** 일봉 데이터 */
+export interface DailyPrice {
+  date: string;       // YYYYMMDD
+  close: number;      // 종가
+  open: number;       // 시가
+  high: number;       // 고가
+  low: number;        // 저가
+  volume: number;     // 거래량
+}
+
+/**
+ * 특정 기간의 일봉 데이터를 조회합니다.
+ * 한투 API: /uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice
+ *
+ * @param ticker - 종목코드
+ * @param startDate - 시작일 (YYYYMMDD)
+ * @param endDate - 종료일 (YYYYMMDD)
+ * @returns 일봉 배열
+ */
+export async function getDailyPrices(
+  ticker: string,
+  startDate: string,
+  endDate: string
+): Promise<DailyPrice[]> {
+  const trId = "FHKST03010100";
+  const data = await kisGet<{
+    rt_cd: string;
+    msg1: string;
+    output2: Array<{
+      stck_bsop_date: string; // 영업일자
+      stck_clpr: string;     // 종가
+      stck_oprc: string;     // 시가
+      stck_hgpr: string;     // 고가
+      stck_lwpr: string;     // 저가
+      acml_vol: string;      // 거래량
+    }>;
+  }>("/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice", trId, {
+    FID_COND_MRKT_DIV_CODE: "J",
+    FID_INPUT_ISCD: ticker,
+    FID_INPUT_DATE_1: startDate,
+    FID_INPUT_DATE_2: endDate,
+    FID_PERIOD_DIV_CODE: "D",
+    FID_ORG_ADJ_PRC: "1",
+  });
+
+  return (data.output2 || [])
+    .filter((d) => d.stck_bsop_date)
+    .map((d) => ({
+      date: d.stck_bsop_date,
+      close: Number(d.stck_clpr),
+      open: Number(d.stck_oprc),
+      high: Number(d.stck_hgpr),
+      low: Number(d.stck_lwpr),
+      volume: Number(d.acml_vol),
+    }));
+}
+
+/**
+ * 특정 날짜의 종가를 조회합니다.
+ * 해당일이 휴장이면 직전 영업일 종가를 반환합니다.
+ *
+ * @param ticker - 종목코드
+ * @param date - 조회일 (YYYYMMDD)
+ * @returns 종가
+ */
+export async function getClosingPrice(
+  ticker: string,
+  date: string
+): Promise<number | null> {
+  try {
+    const prices = await getDailyPrices(ticker, date, date);
+    if (prices.length > 0) return prices[0].close;
+
+    // 해당일 데이터 없으면 앞뒤 5일 범위로 조회
+    const d = new Date(
+      `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`
+    );
+    d.setDate(d.getDate() - 5);
+    const start = d.toISOString().slice(0, 10).replace(/-/g, "");
+    const extended = await getDailyPrices(ticker, start, date);
+    if (extended.length > 0) return extended[extended.length - 1].close;
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// ============================================================
 // 유틸리티
 // ============================================================
 

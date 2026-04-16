@@ -2,6 +2,7 @@
 
 import { useStockPrice } from "@/hooks/useStockPrice";
 import { TrendingUp, TrendingDown, Clock, CheckCircle2, XCircle, RefreshCw, Wifi, WifiOff } from "lucide-react";
+import StockLink from "@/components/ui/StockLink";
 
 export interface SignalInfo {
   id: string;
@@ -55,9 +56,7 @@ export default function LiveSignalTracker({ signal }: { signal: SignalInfo }) {
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <div className="flex items-center gap-2">
-          <span className="text-base font-bold text-gray-900">
-            {signal.stockName}
-          </span>
+          <StockLink stockName={signal.stockName} ticker={signal.ticker} className="text-base" />
           <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] text-gray-500">
             {signal.sector}
           </span>

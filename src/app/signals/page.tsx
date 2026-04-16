@@ -10,11 +10,11 @@ import PerformanceSummary, {
 // --- 샘플 데이터 ---
 
 const performance: Performance = {
-  totalSignals: 24,
-  hitRate: 79,
-  avgReturn: 12.4,
-  bestReturn: 23.5,
-  bestStock: "현대로템",
+  totalSignals: 38,
+  hitRate: 94.7,
+  avgReturn: 12.5,
+  bestReturn: 24,
+  bestStock: "동서",
   period: "2025년 1월 ~ 현재",
 };
 
@@ -162,7 +162,7 @@ export default function SignalsPage() {
             <div>
               <p className="text-sm font-bold text-gray-900">과거 시그널 히스토리</p>
               <p className="text-[11px] text-gray-400">
-                34건 · 적중률 97.1% · 평균 수익률 +13.4%
+                38건 · 적중률 94.7% · 평균 수익률 +12.5%
               </p>
             </div>
           </div>

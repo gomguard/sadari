@@ -52,11 +52,11 @@ const todayActions: ActionItem[] = [
 ];
 
 const performance: Performance = {
-  totalSignals: 24,
-  hitRate: 79,
-  avgReturn: 12.4,
-  bestReturn: 23.5,
-  bestStock: "현대로템",
+  totalSignals: 38,
+  hitRate: 94.7,
+  avgReturn: 12.5,
+  bestReturn: 24,
+  bestStock: "동서",
   period: "2025년 1월 ~ 현재",
 };
 
