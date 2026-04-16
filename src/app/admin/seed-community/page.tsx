@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { addPost, addComment } from "@/lib/firestore";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, collection, getDocs, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 // ============================================================
@@ -38,7 +38,7 @@ const seedPosts: SeedPost[] = [
 요즘은 차트도 좀 보고 뉴스도 챙겨보니까 감이 오기 시작해요.
 
 역시 주식은 공부가 답인 것 같습니다.
-다들 성투하세요! 🙏`,
+다들 성투하세요!`,
     category: "자유",
     likes: 12,
     comments: [
@@ -647,9 +647,62 @@ export default function SeedCommunityPage() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [progress, setProgress] = useState("");
   const [details, setDetails] = useState<string[]>([]);
+  const [existingCount, setExistingCount] = useState<number | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  // Check if data already exists on mount
+  useEffect(() => {
+    checkExistingData();
+  }, []);
+
+  const checkExistingData = async () => {
+    try {
+      const postsSnap = await getDocs(collection(db, "communityPosts"));
+      setExistingCount(postsSnap.size);
+    } catch (err) {
+      console.error("Failed to check existing data:", err);
+      setExistingCount(0);
+    }
+  };
+
+  const handleDeleteExisting = async () => {
+    setDeleting(true);
+    setProgress("기존 데이터 삭제 중...");
+    try {
+      // Delete all comments
+      const commentsSnap = await getDocs(collection(db, "communityComments"));
+      for (const d of commentsSnap.docs) {
+        await deleteDoc(doc(db, "communityComments", d.id));
+      }
+
+      // Delete all posts
+      const postsSnap = await getDocs(collection(db, "communityPosts"));
+      for (const d of postsSnap.docs) {
+        await deleteDoc(doc(db, "communityPosts", d.id));
+      }
+
+      setExistingCount(0);
+      setShowConfirm(false);
+      setProgress(`기존 데이터 삭제 완료 (게시글 ${postsSnap.size}개, 댓글 ${commentsSnap.size}개)`);
+      setDetails([]);
+      setStatus("idle");
+    } catch (err) {
+      console.error(err);
+      setProgress(`삭제 오류: ${err instanceof Error ? err.message : String(err)}`);
+    }
+    setDeleting(false);
+  };
 
   const handleSeed = async () => {
+    // If data exists, show confirmation first
+    if (existingCount && existingCount > 0 && !showConfirm) {
+      setShowConfirm(true);
+      return;
+    }
+
     if (status === "loading") return;
+    setShowConfirm(false);
     setStatus("loading");
     setProgress("시작 중...");
     setDetails([]);
@@ -692,11 +745,9 @@ export default function SeedCommunityPage() {
           totalComments++;
         }
 
-        // commentCount는 addComment가 자동 증가시키므로 별도 처리 불필요
-
         setDetails((prev) => [
           ...prev,
-          `✓ [${post.category}] ${post.title} (댓글 ${post.comments.length}개)`,
+          `[${post.category}] ${post.title} (댓글 ${post.comments.length}개)`,
         ]);
 
         // 속도 제한 방지
@@ -707,6 +758,7 @@ export default function SeedCommunityPage() {
         `완료! 게시글 ${seedPosts.length}개, 댓글 ${totalComments}개 등록됨`
       );
       setStatus("success");
+      setExistingCount((prev) => (prev ?? 0) + seedPosts.length);
     } catch (err) {
       console.error(err);
       setProgress(`오류 발생: ${err instanceof Error ? err.message : String(err)}`);
@@ -722,9 +774,49 @@ export default function SeedCommunityPage() {
           30개 게시글 + 80~100개 댓글을 Firestore에 등록합니다.
         </p>
 
+        {/* Existing data warning */}
+        {existingCount !== null && existingCount > 0 && (
+          <div className="mb-4 p-4 rounded-lg bg-amber-900/30 border border-amber-700/50">
+            <p className="text-amber-400 text-sm font-medium">
+              현재 communityPosts 컬렉션에 {existingCount}개의 문서가 있습니다.
+            </p>
+            {showConfirm && (
+              <div className="mt-3">
+                <p className="text-amber-300 text-sm mb-3">
+                  이미 데이터가 있습니다. 기존 데이터를 삭제하고 다시 시딩하시겠습니까?
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleDeleteExisting}
+                    disabled={deleting}
+                    className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition-colors disabled:opacity-50"
+                  >
+                    {deleting ? "삭제 중..." : "기존 데이터 삭제"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowConfirm(false);
+                      handleSeed();
+                    }}
+                    className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium transition-colors"
+                  >
+                    삭제 없이 추가
+                  </button>
+                  <button
+                    onClick={() => setShowConfirm(false)}
+                    className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium transition-colors"
+                  >
+                    취소
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <button
           onClick={handleSeed}
-          disabled={status === "loading"}
+          disabled={status === "loading" || deleting}
           className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
             status === "loading"
               ? "bg-gray-700 text-gray-400 cursor-not-allowed"
@@ -740,7 +832,7 @@ export default function SeedCommunityPage() {
             : status === "success"
             ? "완료! 다시 실행"
             : status === "error"
-            ? "오류 발생 — 다시 시도"
+            ? "오류 발생 - 다시 시도"
             : "시드 데이터 등록"}
         </button>
 
