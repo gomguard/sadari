@@ -19,6 +19,8 @@ import {
   type StockPrice,
 } from "@/lib/kis";
 
+export const dynamic = "force-dynamic";
+
 /** 응답 캐시 헤더 설정 (CDN/브라우저 캐시 5초) */
 const CACHE_HEADERS = {
   "Cache-Control": "public, s-maxage=5, stale-while-revalidate=10",

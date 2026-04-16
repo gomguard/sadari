@@ -24,6 +24,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSectorData, MAJOR_SECTOR_MAP, SECTOR_CODES } from "@/lib/kis";
 
+export const dynamic = "force-dynamic";
+
 /** 응답 캐시 헤더 (15초 캐시) */
 const CACHE_HEADERS = {
   "Cache-Control": "public, s-maxage=15, stale-while-revalidate=30",
