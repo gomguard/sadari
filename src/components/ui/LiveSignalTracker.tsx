@@ -1,7 +1,7 @@
 "use client";
 
 import { useStockPrice } from "@/hooks/useStockPrice";
-import { TrendingUp, TrendingDown, Clock, CheckCircle2, XCircle, RefreshCw } from "lucide-react";
+import { TrendingUp, TrendingDown, Clock, CheckCircle2, XCircle, RefreshCw, Wifi, WifiOff } from "lucide-react";
 
 export interface SignalInfo {
   id: string;
@@ -32,16 +32,17 @@ const statusConfig = {
 };
 
 export default function LiveSignalTracker({ signal }: { signal: SignalInfo }) {
-  const { price, changeRate, loading, lastUpdated, refresh } = useStockPrice(
+  const { price, change, changeRate, loading, error, lastUpdated, refresh } = useStockPrice(
     signal.ticker,
-    { intervalMs: 60000 } // 1분마다 갱신
+    { intervalMs: 60000 }
   );
 
+  const hasLivePrice = price !== null && !error;
   const currentPrice = price ?? signal.entryPrice;
   const config = statusConfig[signal.status];
   const Icon = config.icon;
-  const returnPct = Number(pct(signal.entryPrice, currentPrice));
-  const isUp = returnPct >= 0;
+  const returnPct = hasLivePrice ? Number(pct(signal.entryPrice, currentPrice)) : null;
+  const isUp = returnPct !== null ? returnPct >= 0 : true;
 
   const range = signal.targetPrice - signal.stopLoss;
   const progress = Math.max(
@@ -61,48 +62,75 @@ export default function LiveSignalTracker({ signal }: { signal: SignalInfo }) {
             {signal.sector}
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <span
-            className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${config.color}`}
-          >
-            <Icon className="h-3 w-3" />
-            {config.label}
-          </span>
-        </div>
+        <span
+          className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${config.color}`}
+        >
+          <Icon className="h-3 w-3" />
+          {config.label}
+        </span>
       </div>
 
-      {/* 실시간 현재가 */}
+      {/* 현재가 & 수익률 — 핵심 영역 */}
       <div className="px-4 py-2">
-        <div className="flex items-end justify-between">
-          <div className="flex items-end gap-2">
-            <span
-              className={`text-2xl font-bold ${isUp ? "text-up" : "text-down"}`}
-            >
-              {isUp ? "+" : ""}
-              {returnPct}%
-            </span>
-            <span className="pb-0.5 text-sm text-gray-400">
-              {formatPrice(currentPrice)}원
-            </span>
-            {loading && (
-              <RefreshCw className="mb-1 h-3 w-3 animate-spin text-gray-300" />
-            )}
-          </div>
-          {changeRate !== null && (
-            <div className="flex items-center gap-1 pb-0.5">
-              <span className={`text-xs font-medium ${changeRate >= 0 ? "text-up" : "text-down"}`}>
-                오늘 {changeRate >= 0 ? "+" : ""}{changeRate}%
+        {hasLivePrice ? (
+          <>
+            {/* 현재가 크게 */}
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold text-gray-900">
+                {formatPrice(currentPrice)}
+                <span className="text-base font-medium text-gray-400">원</span>
+              </span>
+              {change !== null && (
+                <span className={`text-sm font-semibold ${changeRate! >= 0 ? "text-up" : "text-down"}`}>
+                  {changeRate! >= 0 ? "▲" : "▼"} {Math.abs(change).toLocaleString()}
+                  ({changeRate! >= 0 ? "+" : ""}{changeRate}%)
+                </span>
+              )}
+            </div>
+            {/* 진입 대비 수익률 */}
+            <div className="mt-1 flex items-center gap-2">
+              <span className={`text-lg font-bold ${isUp ? "text-up" : "text-down"}`}>
+                진입 대비 {returnPct! >= 0 ? "+" : ""}{returnPct}%
+              </span>
+              <span className="text-xs text-gray-400">
+                ({formatPrice(signal.entryPrice)}원 →{" "}
+                {formatPrice(currentPrice)}원)
               </span>
             </div>
-          )}
-        </div>
-        {lastUpdated && (
-          <p className="mt-0.5 text-[10px] text-gray-300">
-            {new Date(lastUpdated).toLocaleTimeString("ko-KR")} 기준
-            <button onClick={refresh} className="ml-1 text-primary-400 hover:text-primary-600">
-              새로고침
-            </button>
-          </p>
+            {/* 타임스탬프 */}
+            <div className="mt-1 flex items-center gap-1.5">
+              <Wifi className="h-3 w-3 text-emerald-400" />
+              <span className="text-[10px] text-gray-300">
+                {lastUpdated
+                  ? new Date(lastUpdated).toLocaleTimeString("ko-KR")
+                  : ""}{" "}
+                실시간
+              </span>
+              <button onClick={refresh} className="text-[10px] text-primary-400 hover:text-primary-600">
+                새로고침
+              </button>
+            </div>
+          </>
+        ) : (
+          /* API 연결 안 됨 */
+          <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2.5">
+            {loading ? (
+              <>
+                <RefreshCw className="h-4 w-4 animate-spin text-gray-300" />
+                <span className="text-sm text-gray-400">시세 불러오는 중...</span>
+              </>
+            ) : (
+              <>
+                <WifiOff className="h-4 w-4 text-gray-300" />
+                <div>
+                  <span className="text-sm text-gray-400">실시간 시세 연결 대기</span>
+                  <p className="text-[10px] text-gray-300">
+                    API 키 설정 후 활성화됩니다
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
         )}
       </div>
 
@@ -124,26 +152,35 @@ export default function LiveSignalTracker({ signal }: { signal: SignalInfo }) {
         </div>
       </div>
 
-      {/* 하단 정보 */}
-      <div className="flex border-t border-gray-50 bg-gray-50/50">
-        <div className="flex-1 px-4 py-2.5 text-center">
+      {/* 하단 가격 정보 */}
+      <div className="grid grid-cols-4 border-t border-gray-50 bg-gray-50/50">
+        <div className="px-3 py-2.5 text-center">
           <p className="text-[10px] text-gray-400">진입가</p>
           <p className="text-xs font-semibold text-gray-700">
             {formatPrice(signal.entryPrice)}
           </p>
         </div>
-        <div className="w-px bg-gray-100" />
-        <div className="flex-1 px-4 py-2.5 text-center">
+        <div className="border-l border-gray-100 px-3 py-2.5 text-center">
+          <p className="text-[10px] text-gray-400">목표가</p>
+          <p className="text-xs font-semibold text-emerald-600">
+            {formatPrice(signal.targetPrice)}
+          </p>
+          <p className="text-[9px] text-emerald-500">
+            +{pct(signal.entryPrice, signal.targetPrice)}%
+          </p>
+        </div>
+        <div className="border-l border-gray-100 px-3 py-2.5 text-center">
+          <p className="text-[10px] text-gray-400">손절가</p>
+          <p className="text-xs font-semibold text-red-500">
+            {formatPrice(signal.stopLoss)}
+          </p>
+          <p className="text-[9px] text-red-400">
+            {pct(signal.entryPrice, signal.stopLoss)}%
+          </p>
+        </div>
+        <div className="border-l border-gray-100 px-3 py-2.5 text-center">
           <p className="text-[10px] text-gray-400">진입일</p>
           <p className="text-xs font-semibold text-gray-700">{signal.date}</p>
-        </div>
-        <div className="w-px bg-gray-100" />
-        <div className="flex-1 px-4 py-2.5 text-center">
-          <p className="text-[10px] text-gray-400">실시간 수익</p>
-          <p className={`text-xs font-semibold ${isUp ? "text-up" : "text-down"}`}>
-            {isUp ? "+" : ""}
-            {returnPct}%
-          </p>
         </div>
       </div>
 

@@ -1,4 +1,5 @@
-import { BarChart3, Filter, CheckCircle2, XCircle, Clock } from "lucide-react";
+import Link from "next/link";
+import { BarChart3, Filter, CheckCircle2, XCircle, Clock, History } from "lucide-react";
 import LiveSignalTracker, {
   SignalInfo,
 } from "@/components/ui/LiveSignalTracker";
@@ -147,6 +148,27 @@ export default function SignalsPage() {
           </div>
         </div>
       </header>
+
+      {/* 과거 기록 링크 */}
+      <section className="px-5 py-2">
+        <Link
+          href="/signals/history"
+          className="flex items-center justify-between rounded-xl border border-gray-100 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 shadow-sm">
+              <History className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-900">과거 시그널 히스토리</p>
+              <p className="text-[11px] text-gray-400">
+                34건 · 적중률 97.1% · 평균 수익률 +13.4%
+              </p>
+            </div>
+          </div>
+          <span className="text-xs text-gray-400">→</span>
+        </Link>
+      </section>
 
       {/* 성과 요약 */}
       <section className="px-5 py-3">
