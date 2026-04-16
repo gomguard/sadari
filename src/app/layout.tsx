@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
+import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata: Metadata = {
   title: "사다리 - 주식 정보 커뮤니티",
@@ -30,10 +31,12 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <div className="mx-auto min-h-screen max-w-lg bg-white pb-20">
-          {children}
-        </div>
-        <Navbar />
+        <AuthProvider>
+          <div className="mx-auto min-h-screen max-w-lg bg-white pb-20">
+            {children}
+          </div>
+          <Navbar />
+        </AuthProvider>
       </body>
     </html>
   );

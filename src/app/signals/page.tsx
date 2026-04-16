@@ -4,6 +4,7 @@ import PerformanceSummary, {
   Performance,
 } from "@/components/ui/PerformanceSummary";
 import LiveSignalsList from "@/components/live/LiveSignalsList";
+import AuthGuard from "@/components/auth/AuthGuard";
 
 // --- 샘플 데이터 (정적 섹션용) ---
 
@@ -18,6 +19,7 @@ const performance: Performance = {
 
 export default function SignalsPage() {
   return (
+    <AuthGuard>
     <main>
       <header className="px-5 pt-12 pb-2">
         <div className="flex items-center justify-between">
@@ -109,5 +111,6 @@ export default function SignalsPage() {
         </p>
       </div>
     </main>
+    </AuthGuard>
   );
 }

@@ -3,7 +3,6 @@ import {
   Newspaper,
   BookOpen,
   Users,
-  Bell,
 } from "lucide-react";
 import LiveMarketData from "@/components/ui/LiveMarketData";
 import SectorHeatmap, { SectorData } from "@/components/ui/SectorHeatmap";
@@ -11,6 +10,7 @@ import PerformanceSummary, {
   Performance,
 } from "@/components/ui/PerformanceSummary";
 import LiveHomeSections from "@/components/live/LiveHomeSections";
+import UserMenu from "@/components/auth/UserMenu";
 
 // --- 샘플 데이터 (정적 섹션용) ---
 
@@ -45,10 +45,7 @@ export default function HomePage() {
             엄청 대단한걸 하지 않습니다. 올바른걸 반복할 뿐.
           </p>
         </div>
-        <button className="relative flex h-10 w-10 items-center justify-center rounded-full bg-gray-100">
-          <Bell className="h-5 w-5 text-gray-500" />
-          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />
-        </button>
+        <UserMenu />
       </header>
 
       {/* 멤버 카운트 */}

@@ -2,14 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { BarChart3, Newspaper, BookOpen, TrendingUp } from "lucide-react";
-import { getSignals, getDailies, getArticles } from "@/lib/firestore";
+import { BarChart3, Newspaper, BookOpen, TrendingUp, MessageSquare } from "lucide-react";
+import { getSignals, getDailies, getArticles, getPosts } from "@/lib/firestore";
 
 interface DashboardStats {
   signalCount: number;
   activeSignals: number;
   dailyCount: number;
   articleCount: number;
+  communityCount: number;
 }
 
 const summaryCards = [
@@ -41,6 +42,13 @@ const summaryCards = [
     color: "from-amber-500 to-amber-600",
     href: "/admin/articles",
   },
+  {
+    label: "커뮤니티 게시글",
+    key: "communityCount" as const,
+    icon: MessageSquare,
+    color: "from-pink-500 to-pink-600",
+    href: "/admin/community",
+  },
 ];
 
 export default function AdminDashboard() {
@@ -49,6 +57,7 @@ export default function AdminDashboard() {
     activeSignals: 0,
     dailyCount: 0,
     articleCount: 0,
+    communityCount: 0,
   });
   const [signals, setSignals] = useState<
     { id: string; stockName: string; sector: string; status: string; date: string }[]
@@ -68,10 +77,11 @@ export default function AdminDashboard() {
       setLoading(true);
       setError(null);
 
-      const [signalsData, dailiesData, articlesData] = await Promise.all([
+      const [signalsData, dailiesData, articlesData, postsData] = await Promise.all([
         getSignals(),
         getDailies(),
         getArticles(),
+        getPosts(),
       ]);
 
       setSignals(
@@ -88,6 +98,7 @@ export default function AdminDashboard() {
         ).length,
         dailyCount: dailiesData.length,
         articleCount: articlesData.length,
+        communityCount: postsData.length,
       });
     } catch (err) {
       console.error("Failed to load dashboard:", err);

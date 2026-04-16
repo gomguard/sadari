@@ -7,6 +7,7 @@ import {
   BarChart3,
   Newspaper,
   BookOpen,
+  MessageSquare,
   ArrowLeft,
 } from "lucide-react";
 
@@ -15,6 +16,7 @@ const navItems = [
   { href: "/admin/signals", label: "시그널 관리", icon: BarChart3 },
   { href: "/admin/daily", label: "데일리 매크로", icon: Newspaper },
   { href: "/admin/articles", label: "웹진 아티클", icon: BookOpen },
+  { href: "/admin/community", label: "커뮤니티 관리", icon: MessageSquare },
 ];
 
 export default function AdminLayout({

@@ -315,6 +315,23 @@ export default function SignalsAdmin() {
                 )}
               </div>
 
+              {/* Ticker */}
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  종목코드 (6자리)
+                </label>
+                <input
+                  type="text"
+                  value={form.ticker}
+                  onChange={(e) => setField("ticker", e.target.value)}
+                  placeholder="예: 005930"
+                  maxLength={6}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none transition-colors focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {/* Sector */}
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">
