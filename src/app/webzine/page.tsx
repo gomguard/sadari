@@ -1,5 +1,5 @@
 import { BookOpen, Play, Lock, ChevronRight, GraduationCap, Star } from "lucide-react";
-import ArticleCard, { Article } from "@/components/ui/ArticleCard";
+import LiveArticlesList from "@/components/live/LiveArticlesList";
 
 // --- 샘플 데이터 ---
 
@@ -43,48 +43,6 @@ const curriculum = [
   },
 ];
 
-const articles: Article[] = [
-  {
-    id: "1",
-    title: "2025년 운영방침: 장투종목, 기술적 타점, 테마주 전략",
-    description:
-      "엄청 대단한걸 하지 않습니다. 다년간 올바른걸 반복할 뿐입니다. 올해의 6가지 전략을 소개합니다.",
-    category: "전략",
-    date: "2025.01.03",
-  },
-  {
-    id: "2",
-    title: "흑자 vs 적자 회사 구분법 - 입문자 필독",
-    description:
-      "조선, 반도체, 바이오(일부), 식료품, 화장품은 실적. 2차전지, 로봇, 화학은 적자 주의.",
-    category: "입문",
-    date: "2025.01.02",
-  },
-  {
-    id: "3",
-    title: "기술적 반등 자리를 노리는 법",
-    description:
-      "이재명 관련주 사례로 보는 기술적 반등 타점. 실전 차트로 살펴봅니다.",
-    category: "차트 수업",
-    date: "2025.01.02",
-  },
-  {
-    id: "4",
-    title: "순환매 공략법: 지수 상승 시 저평가 종목 찾기",
-    description:
-      "지수가 오르면 흑자 종목들은 순환매가 나옵니다. 섹터별 종목 분석.",
-    category: "전략",
-    date: "2025.01.06",
-  },
-  {
-    id: "5",
-    title: "손절 설정의 원칙과 익절 기준",
-    description:
-      "못해도 10% 이상 수익이 나는 종목으로만 접근. 손절과 익절의 원칙.",
-    category: "입문",
-    date: "2025.01.07",
-  },
-];
 
 const videoLessons = [
   {
@@ -301,16 +259,14 @@ export default function WebzinePage() {
         </div>
       </section>
 
-      {/* 칼럼 */}
+      {/* 칼럼 — Firestore 실시간 연동 */}
       <section className="px-5 py-3">
         <div className="flex items-center gap-1.5">
           <Star className="h-4 w-4 text-primary-600" />
           <h2 className="text-sm font-bold text-gray-900">칼럼</h2>
         </div>
-        <div className="mt-2 space-y-3">
-          {articles.map((article) => (
-            <ArticleCard key={article.id} article={article} />
-          ))}
+        <div className="mt-2">
+          <LiveArticlesList />
         </div>
       </section>
     </main>

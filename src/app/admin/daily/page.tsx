@@ -2,6 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { Save, Plus, Trash2, Pencil, X } from "lucide-react";
+import {
+  getDailies,
+  addDaily,
+  updateDaily,
+  deleteDaily,
+} from "@/lib/firestore";
 
 interface MarketIndicator {
   label: string;
@@ -43,13 +49,13 @@ const DEFAULT_INDICATORS: MarketIndicator[] = [
   { label: "코스피 거래대금", value: "", up: true },
 ];
 
-const STORAGE_KEY = "admin_dailies";
-
 export default function DailyAdmin() {
   const [posts, setPosts] = useState<DailyPost[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Form state
   const [date, setDate] = useState("");
@@ -63,17 +69,22 @@ export default function DailyAdmin() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    setMounted(true);
-    // TODO: Replace with Firestore
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) setPosts(JSON.parse(stored));
+    loadDailies();
     setDate(new Date().toISOString().split("T")[0]);
   }, []);
 
-  function persist(updated: DailyPost[]) {
-    setPosts(updated);
-    // TODO: Replace with Firestore
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  async function loadDailies() {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getDailies();
+      setPosts(data as unknown as DailyPost[]);
+    } catch (err) {
+      console.error("Failed to load dailies:", err);
+      setError("데일리 데이터를 불러오는데 실패했습니다.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   function validate(): boolean {
@@ -87,41 +98,44 @@ export default function DailyAdmin() {
     return Object.keys(errs).length === 0;
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) return;
 
     const filteredIndicators = indicators.filter((ind) => ind.value.trim());
 
-    if (editingId) {
-      const updated = posts.map((p) =>
-        p.id === editingId
-          ? {
-              ...p,
-              date,
-              mood,
-              haseulComment,
-              summary,
-              indicators: filteredIndicators,
-              actions,
-            }
-          : p
-      );
-      persist(updated);
-    } else {
-      const newPost: DailyPost = {
-        id: crypto.randomUUID(),
-        date,
-        mood,
-        haseulComment,
-        summary,
-        indicators: filteredIndicators,
-        actions,
-      };
-      persist([...posts, newPost]);
-    }
+    try {
+      setSaving(true);
+      setError(null);
 
-    resetForm();
+      if (editingId) {
+        await updateDaily(editingId, {
+          date,
+          mood,
+          haseulComment,
+          summary,
+          indicators: filteredIndicators,
+          actions,
+        });
+      } else {
+        await addDaily({
+          date,
+          mood,
+          haseulComment,
+          summary,
+          indicators: filteredIndicators,
+          actions,
+        });
+      }
+
+      await loadDailies();
+      resetForm();
+    } catch (err) {
+      console.error("Failed to save daily:", err);
+      setError("데일리 저장에 실패했습니다. 다시 시도해주세요.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   function handleEdit(post: DailyPost) {
@@ -138,9 +152,17 @@ export default function DailyAdmin() {
     setErrors({});
   }
 
-  function handleDelete(id: string) {
+  async function handleDelete(id: string) {
     if (!confirm("정말 삭제하시겠습니까?")) return;
-    persist(posts.filter((p) => p.id !== id));
+
+    try {
+      setError(null);
+      await deleteDaily(id);
+      setPosts((prev) => prev.filter((p) => p.id !== id));
+    } catch (err) {
+      console.error("Failed to delete daily:", err);
+      setError("데일리 삭제에 실패했습니다. 다시 시도해주세요.");
+    }
   }
 
   function resetForm() {
@@ -198,7 +220,16 @@ export default function DailyAdmin() {
     setActions(actions.filter((_, i) => i !== index));
   }
 
-  if (!mounted) return null;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-primary-600" />
+          <p className="mt-3 text-sm text-gray-500">데일리 데이터를 불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -222,6 +253,13 @@ export default function DailyAdmin() {
           </button>
         )}
       </div>
+
+      {/* Error message */}
+      {error && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
       {/* Form */}
       {showForm && (
@@ -453,10 +491,15 @@ export default function DailyAdmin() {
             <div className="flex items-center gap-3 pt-2">
               <button
                 type="submit"
-                className="flex items-center gap-1.5 rounded-lg bg-primary-600 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-700"
+                disabled={saving}
+                className="flex items-center gap-1.5 rounded-lg bg-primary-600 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-700 disabled:opacity-50"
               >
                 <Save className="h-4 w-4" />
-                {editingId ? "수정 완료" : "데일리 등록"}
+                {saving
+                  ? "저장 중..."
+                  : editingId
+                    ? "수정 완료"
+                    : "데일리 등록"}
               </button>
               <button
                 type="button"

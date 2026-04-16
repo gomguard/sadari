@@ -3,28 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BarChart3, Newspaper, BookOpen, TrendingUp } from "lucide-react";
+import { getSignals, getDailies, getArticles } from "@/lib/firestore";
 
 interface DashboardStats {
   signalCount: number;
   activeSignals: number;
   dailyCount: number;
   articleCount: number;
-}
-
-function getStats(): DashboardStats {
-  // TODO: Replace with Firestore
-  const signals = JSON.parse(localStorage.getItem("admin_signals") || "[]");
-  const dailies = JSON.parse(localStorage.getItem("admin_dailies") || "[]");
-  const articles = JSON.parse(localStorage.getItem("admin_articles") || "[]");
-
-  return {
-    signalCount: signals.length,
-    activeSignals: signals.filter(
-      (s: { status: string }) => s.status === "active"
-    ).length,
-    dailyCount: dailies.length,
-    articleCount: articles.length,
-  };
 }
 
 const summaryCards = [
@@ -65,14 +50,63 @@ export default function AdminDashboard() {
     dailyCount: 0,
     articleCount: 0,
   });
-  const [mounted, setMounted] = useState(false);
+  const [signals, setSignals] = useState<
+    { id: string; stockName: string; sector: string; status: string; date: string }[]
+  >([]);
+  const [articles, setArticles] = useState<
+    { id: string; title: string; category: string; isPremium: boolean }[]
+  >([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setMounted(true);
-    setStats(getStats());
+    loadDashboard();
   }, []);
 
-  if (!mounted) return null;
+  async function loadDashboard() {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const [signalsData, dailiesData, articlesData] = await Promise.all([
+        getSignals(),
+        getDailies(),
+        getArticles(),
+      ]);
+
+      setSignals(
+        signalsData as { id: string; stockName: string; sector: string; status: string; date: string }[]
+      );
+      setArticles(
+        articlesData as { id: string; title: string; category: string; isPremium: boolean }[]
+      );
+
+      setStats({
+        signalCount: signalsData.length,
+        activeSignals: signalsData.filter(
+          (s: { status?: string }) => s.status === "active"
+        ).length,
+        dailyCount: dailiesData.length,
+        articleCount: articlesData.length,
+      });
+    } catch (err) {
+      console.error("Failed to load dashboard:", err);
+      setError("대시보드 데이터를 불러오는데 실패했습니다.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-primary-600" />
+          <p className="mt-3 text-sm text-gray-500">대시보드를 불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -82,6 +116,13 @@ export default function AdminDashboard() {
           사다리 콘텐츠를 관리하세요.
         </p>
       </div>
+
+      {/* Error message */}
+      {error && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -113,20 +154,18 @@ export default function AdminDashboard() {
 
       {/* Recent Activity */}
       <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <RecentSignals />
-        <RecentArticles />
+        <RecentSignals signals={signals} />
+        <RecentArticles articles={articles} />
       </div>
     </div>
   );
 }
 
-function RecentSignals() {
-  // TODO: Replace with Firestore
-  const signals = JSON.parse(
-    typeof window !== "undefined"
-      ? localStorage.getItem("admin_signals") || "[]"
-      : "[]"
-  );
+function RecentSignals({
+  signals,
+}: {
+  signals: { id: string; stockName: string; sector: string; status: string; date: string }[];
+}) {
   const recent = signals.slice(-5).reverse();
 
   return (
@@ -146,37 +185,33 @@ function RecentSignals() {
         </p>
       ) : (
         <div className="mt-3 space-y-2">
-          {recent.map(
-            (s: { id: string; stockName: string; sector: string; status: string; date: string }) => (
-              <div
-                key={s.id}
-                className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-800">
-                    {s.stockName}
-                  </span>
-                  <span className="rounded-full bg-gray-200 px-1.5 py-0.5 text-[10px] text-gray-500">
-                    {s.sector}
-                  </span>
-                </div>
-                <StatusBadge status={s.status} />
+          {recent.map((s) => (
+            <div
+              key={s.id}
+              className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-800">
+                  {s.stockName}
+                </span>
+                <span className="rounded-full bg-gray-200 px-1.5 py-0.5 text-[10px] text-gray-500">
+                  {s.sector}
+                </span>
               </div>
-            )
-          )}
+              <StatusBadge status={s.status} />
+            </div>
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-function RecentArticles() {
-  // TODO: Replace with Firestore
-  const articles = JSON.parse(
-    typeof window !== "undefined"
-      ? localStorage.getItem("admin_articles") || "[]"
-      : "[]"
-  );
+function RecentArticles({
+  articles,
+}: {
+  articles: { id: string; title: string; category: string; isPremium: boolean }[];
+}) {
   const recent = articles.slice(-5).reverse();
 
   return (
@@ -196,28 +231,26 @@ function RecentArticles() {
         </p>
       ) : (
         <div className="mt-3 space-y-2">
-          {recent.map(
-            (a: { id: string; title: string; category: string; isPremium: boolean }) => (
-              <div
-                key={a.id}
-                className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-800 line-clamp-1">
-                    {a.title}
-                  </span>
-                  <span className="shrink-0 rounded-full bg-primary-50 px-1.5 py-0.5 text-[10px] text-primary-600">
-                    {a.category}
-                  </span>
-                </div>
-                {a.isPremium && (
-                  <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-600">
-                    PRO
-                  </span>
-                )}
+          {recent.map((a) => (
+            <div
+              key={a.id}
+              className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-800 line-clamp-1">
+                  {a.title}
+                </span>
+                <span className="shrink-0 rounded-full bg-primary-50 px-1.5 py-0.5 text-[10px] text-primary-600">
+                  {a.category}
+                </span>
               </div>
-            )
-          )}
+              {a.isPremium && (
+                <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-600">
+                  PRO
+                </span>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>

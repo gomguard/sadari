@@ -2,10 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X, Save, Send } from "lucide-react";
+import {
+  getSignals,
+  addSignal,
+  updateSignal,
+  deleteSignal,
+} from "@/lib/firestore";
 
 interface AdminSignal {
   id: string;
   stockName: string;
+  ticker: string;
   sector: string;
   entryPrice: number;
   targetPrice: number;
@@ -18,6 +25,7 @@ interface AdminSignal {
 
 const EMPTY_SIGNAL: Omit<AdminSignal, "id" | "date"> = {
   stockName: "",
+  ticker: "",
   sector: "",
   entryPrice: 0,
   targetPrice: 0,
@@ -54,15 +62,15 @@ const statusColors: Record<string, string> = {
   holding: "bg-amber-100 text-amber-700",
 };
 
-const STORAGE_KEY = "admin_signals";
-
 export default function SignalsAdmin() {
   const [signals, setSignals] = useState<AdminSignal[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_SIGNAL);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [sendingKakao, setSendingKakao] = useState<string | null>(null);
   const [kakaoResult, setKakaoResult] = useState<{
     id: string;
@@ -71,16 +79,21 @@ export default function SignalsAdmin() {
   } | null>(null);
 
   useEffect(() => {
-    setMounted(true);
-    // TODO: Replace with Firestore
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) setSignals(JSON.parse(stored));
+    loadSignals();
   }, []);
 
-  function persist(updated: AdminSignal[]) {
-    setSignals(updated);
-    // TODO: Replace with Firestore
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  async function loadSignals() {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getSignals();
+      setSignals(data as unknown as AdminSignal[]);
+    } catch (err) {
+      console.error("Failed to load signals:", err);
+      setError("시그널 데이터를 불러오는데 실패했습니다.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   function validate(): boolean {
@@ -98,35 +111,43 @@ export default function SignalsAdmin() {
     return Object.keys(errs).length === 0;
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) return;
 
-    if (editingId) {
-      const updated = signals.map((s) =>
-        s.id === editingId ? { ...s, ...form } : s
-      );
-      persist(updated);
-    } else {
-      const newSignal: AdminSignal = {
-        ...form,
-        id: crypto.randomUUID(),
-        date: new Date().toLocaleDateString("ko-KR", {
-          month: "2-digit",
-          day: "2-digit",
-        }),
-        currentPrice: form.currentPrice || form.entryPrice,
-      };
-      persist([...signals, newSignal]);
-    }
+    try {
+      setSaving(true);
+      setError(null);
 
-    resetForm();
+      if (editingId) {
+        await updateSignal(editingId, form);
+      } else {
+        const newSignalData = {
+          ...form,
+          ticker: form.ticker || "",
+          date: new Date().toLocaleDateString("ko-KR", {
+            month: "2-digit",
+            day: "2-digit",
+          }),
+        };
+        await addSignal(newSignalData as any);
+      }
+
+      await loadSignals();
+      resetForm();
+    } catch (err) {
+      console.error("Failed to save signal:", err);
+      setError("시그널 저장에 실패했습니다. 다시 시도해주세요.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   function handleEdit(signal: AdminSignal) {
     setEditingId(signal.id);
     setForm({
       stockName: signal.stockName,
+      ticker: signal.ticker || "",
       sector: signal.sector,
       entryPrice: signal.entryPrice,
       targetPrice: signal.targetPrice,
@@ -139,9 +160,17 @@ export default function SignalsAdmin() {
     setErrors({});
   }
 
-  function handleDelete(id: string) {
+  async function handleDelete(id: string) {
     if (!confirm("정말 삭제하시겠습니까?")) return;
-    persist(signals.filter((s) => s.id !== id));
+
+    try {
+      setError(null);
+      await deleteSignal(id);
+      setSignals((prev) => prev.filter((s) => s.id !== id));
+    } catch (err) {
+      console.error("Failed to delete signal:", err);
+      setError("시그널 삭제에 실패했습니다. 다시 시도해주세요.");
+    }
   }
 
   function resetForm() {
@@ -209,7 +238,16 @@ export default function SignalsAdmin() {
     }
   }
 
-  if (!mounted) return null;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-primary-600" />
+          <p className="mt-3 text-sm text-gray-500">시그널 데이터를 불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -233,6 +271,13 @@ export default function SignalsAdmin() {
           </button>
         )}
       </div>
+
+      {/* Error message */}
+      {error && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
       {/* Form */}
       {showForm && (
@@ -424,10 +469,15 @@ export default function SignalsAdmin() {
             <div className="flex items-center gap-3 pt-2">
               <button
                 type="submit"
-                className="flex items-center gap-1.5 rounded-lg bg-primary-600 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-700"
+                disabled={saving}
+                className="flex items-center gap-1.5 rounded-lg bg-primary-600 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-700 disabled:opacity-50"
               >
                 <Save className="h-4 w-4" />
-                {editingId ? "수정 완료" : "시그널 등록"}
+                {saving
+                  ? "저장 중..."
+                  : editingId
+                    ? "수정 완료"
+                    : "시그널 등록"}
               </button>
               <button
                 type="button"
