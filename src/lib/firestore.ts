@@ -362,3 +362,47 @@ export async function likeComment(id: string): Promise<void> {
   const current = snap.data().likes ?? 0;
   await updateDoc(ref, { likes: current + 1 });
 }
+
+// ============================================================
+// 사용자 프로필 (User Profile)
+// ============================================================
+
+export interface FirestoreUserProfile {
+  uid: string;
+  nickname: string;
+  contact: string;
+  sectors: string[];
+  updatedAt: Timestamp;
+}
+
+/** 사용자 프로필 조회 */
+export async function getUserProfile(
+  uid: string
+): Promise<FirestoreUserProfile | null> {
+  const ref = doc(db, "users", uid);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+  return { uid: snap.id, ...snap.data() } as FirestoreUserProfile;
+}
+
+/** 사용자 프로필 저장 (생성 또는 업데이트) */
+export async function saveUserProfile(
+  uid: string,
+  data: Omit<FirestoreUserProfile, "uid" | "updatedAt">
+): Promise<void> {
+  const ref = doc(db, "users", uid);
+  const snap = await getDoc(ref);
+  if (snap.exists()) {
+    await updateDoc(ref, {
+      ...data,
+      updatedAt: serverTimestamp(),
+    });
+  } else {
+    const { setDoc } = await import("firebase/firestore");
+    await setDoc(ref, {
+      uid,
+      ...data,
+      updatedAt: serverTimestamp(),
+    });
+  }
+}

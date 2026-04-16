@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { signOut } from "@/lib/auth";
 import { LogOut, User } from "lucide-react";
@@ -47,24 +48,29 @@ export default function UserMenu() {
 
   return (
     <div className="flex items-center gap-2">
-      {/* 프로필 이미지 또는 이니셜 */}
-      {user.photoURL ? (
-        <img
-          src={user.photoURL}
-          alt={user.displayName || "프로필"}
-          className="h-8 w-8 rounded-full object-cover"
-          referrerPolicy="no-referrer"
-        />
-      ) : (
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-gray-700 to-gray-900 text-xs font-bold text-white">
-          {user.displayName?.charAt(0) || <User className="h-4 w-4" />}
-        </div>
-      )}
+      {/* 프로필 이미지 또는 이니셜 — 클릭 시 마이페이지 이동 */}
+      <Link href="/mypage" className="flex-shrink-0">
+        {user.photoURL ? (
+          <img
+            src={user.photoURL}
+            alt={user.displayName || "프로필"}
+            className="h-8 w-8 rounded-full object-cover transition-opacity hover:opacity-80"
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-gray-700 to-gray-900 text-xs font-bold text-white transition-opacity hover:opacity-80">
+            {user.displayName?.charAt(0) || <User className="h-4 w-4" />}
+          </div>
+        )}
+      </Link>
 
-      {/* 이름 */}
-      <span className="max-w-[80px] truncate text-xs font-medium text-gray-700">
+      {/* 이름 — 클릭 시 마이페이지 이동 */}
+      <Link
+        href="/mypage"
+        className="max-w-[80px] truncate text-xs font-medium text-gray-700 transition-colors hover:text-gray-900"
+      >
         {user.displayName || "사용자"}
-      </span>
+      </Link>
 
       {/* 로그아웃 버튼 */}
       <button
