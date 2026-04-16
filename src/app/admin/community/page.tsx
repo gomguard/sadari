@@ -20,6 +20,8 @@ export default function CommunityAdmin() {
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadPosts();
@@ -46,9 +48,61 @@ export default function CommunityAdmin() {
       setError(null);
       await deletePost(id);
       setPosts((prev) => prev.filter((p) => p.id !== id));
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     } catch (err) {
       console.error("Failed to delete post:", err);
       setError("게시글 삭제에 실패했습니다. 다시 시도해주세요.");
+    }
+  }
+
+  async function handleBulkDelete() {
+    if (selectedIds.size === 0) return;
+    if (
+      !confirm(
+        `선택한 ${selectedIds.size}개의 게시글을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`
+      )
+    )
+      return;
+
+    setDeleting(true);
+    setError(null);
+
+    try {
+      const deletePromises = Array.from(selectedIds).map((id) =>
+        deletePost(id)
+      );
+      await Promise.all(deletePromises);
+      setPosts((prev) => prev.filter((p) => !selectedIds.has(p.id!)));
+      setSelectedIds(new Set());
+    } catch (err) {
+      console.error("Failed to bulk delete:", err);
+      setError("일부 게시글 삭제에 실패했습니다. 다시 시도해주세요.");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.size === posts.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(posts.map((p) => p.id!)));
     }
   }
 
@@ -61,6 +115,13 @@ export default function CommunityAdmin() {
       day: "2-digit",
     });
   }
+
+  function truncateTitle(title: string, maxLen = 40): string {
+    if (title.length <= maxLen) return title;
+    return title.slice(0, maxLen) + "...";
+  }
+
+  const allSelected = posts.length > 0 && selectedIds.size === posts.length;
 
   if (loading) {
     return (
@@ -75,11 +136,25 @@ export default function CommunityAdmin() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">커뮤니티 관리</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          커뮤니티 게시글을 관리하고 모더레이션합니다.
-        </p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">커뮤니티 관리</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            커뮤니티 게시글을 관리하고 모더레이션합니다.
+          </p>
+        </div>
+        {selectedIds.size > 0 && (
+          <button
+            onClick={handleBulkDelete}
+            disabled={deleting}
+            className="flex items-center gap-2 rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-600 disabled:opacity-50"
+          >
+            <Trash2 className="h-4 w-4" />
+            {deleting
+              ? "삭제 중..."
+              : `선택 삭제 (${selectedIds.size})`}
+          </button>
+        )}
       </div>
 
       {/* Error message */}
@@ -108,6 +183,14 @@ export default function CommunityAdmin() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50 text-xs text-gray-500">
+                  <th className="px-4 py-3 font-medium">
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={toggleSelectAll}
+                      className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    />
+                  </th>
                   <th className="px-5 py-3 font-medium">제목</th>
                   <th className="px-5 py-3 font-medium">닉네임</th>
                   <th className="px-5 py-3 font-medium">카테고리</th>
@@ -121,11 +204,24 @@ export default function CommunityAdmin() {
                 {posts.map((post) => (
                   <tr
                     key={post.id}
-                    className="transition-colors hover:bg-gray-50"
+                    className={`transition-colors hover:bg-gray-50 ${
+                      selectedIds.has(post.id!) ? "bg-primary-50/50" : ""
+                    }`}
                   >
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(post.id!)}
+                        onChange={() => toggleSelect(post.id!)}
+                        className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      />
+                    </td>
                     <td className="max-w-[280px] px-5 py-3">
-                      <span className="font-medium text-gray-900 line-clamp-1">
-                        {post.title}
+                      <span
+                        className="font-medium text-gray-900"
+                        title={post.title}
+                      >
+                        {truncateTitle(post.title)}
                       </span>
                     </td>
                     <td className="px-5 py-3 text-gray-600">

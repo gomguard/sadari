@@ -10,14 +10,18 @@ import {
   MessageSquare,
   ArrowLeft,
   Database,
+  Users,
+  Zap,
 } from "lucide-react";
 
 const navItems = [
+  { href: "/admin/quick", label: "빠른 발행", icon: Zap },
   { href: "/admin", label: "대시보드", icon: LayoutDashboard },
   { href: "/admin/signals", label: "시그널 관리", icon: BarChart3 },
   { href: "/admin/daily", label: "데일리 매크로", icon: Newspaper },
   { href: "/admin/articles", label: "웹진 아티클", icon: BookOpen },
   { href: "/admin/community", label: "커뮤니티 관리", icon: MessageSquare },
+  { href: "/admin/users", label: "회원 관리", icon: Users },
   { href: "/admin/seed", label: "샘플 데이터 시딩", icon: Database },
 ];
 

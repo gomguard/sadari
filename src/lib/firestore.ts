@@ -406,3 +406,34 @@ export async function saveUserProfile(
     });
   }
 }
+
+// ============================================================
+// 회원 관리 (User Management - Admin)
+// ============================================================
+
+/** 전체 사용자 목록 조회 */
+export async function getAllUsers(): Promise<FirestoreUserProfile[]> {
+  const usersCol = collection(db, "users");
+  const snapshot = await getDocs(usersCol);
+  return snapshot.docs.map(
+    (d) => ({ uid: d.id, ...d.data() }) as FirestoreUserProfile
+  );
+}
+
+/** 사용자 정지 처리 */
+export async function suspendUser(uid: string): Promise<void> {
+  const ref = doc(db, "users", uid);
+  await updateDoc(ref, { suspended: true });
+}
+
+/** 사용자 정지 해제 */
+export async function unsuspendUser(uid: string): Promise<void> {
+  const ref = doc(db, "users", uid);
+  await updateDoc(ref, { suspended: false });
+}
+
+/** 사용자 프로필 삭제 (Firestore 문서만 삭제 — Firebase Auth 계정 삭제는 Firebase Admin SDK 필요) */
+export async function deleteUserProfile(uid: string): Promise<void> {
+  const ref = doc(db, "users", uid);
+  await deleteDoc(ref);
+}
