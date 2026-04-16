@@ -8,6 +8,7 @@ import {
   ReactNode,
 } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 interface AuthContextType {
   user: User | null;
@@ -21,13 +22,36 @@ const AuthContext = createContext<AuthContextType>({
   isPremium: false,
 });
 
+/** 로그인 시 자동으로 Firestore users 컬렉션에 유저 등록 */
+async function ensureUserProfile(user: User) {
+  try {
+    const { db } = await import("@/lib/firebase");
+    const userRef = doc(db, "users", user.uid);
+    const userDoc = await getDoc(userRef);
+
+    if (!userDoc.exists()) {
+      // 신규 유저 → 자동 생성
+      await setDoc(userRef, {
+        uid: user.uid,
+        nickname: user.displayName || "사다리 멤버",
+        phone: "",
+        sectors: [],
+        photoURL: user.photoURL || "",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+    }
+  } catch (e) {
+    console.error("유저 프로필 자동 생성 실패:", e);
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPremium, setIsPremium] = useState(false);
 
   useEffect(() => {
-    // Firebase Auth가 설정되기 전에는 로딩만 해제
     let unsubscribe: () => void = () => {};
     try {
       const { auth } = require("@/lib/firebase");
@@ -36,13 +60,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (firebaseUser) {
           const token = await firebaseUser.getIdTokenResult();
           setIsPremium(!!token.claims.premium);
+          // 로그인 시 자동으로 유저 프로필 생성/확인
+          await ensureUserProfile(firebaseUser);
         } else {
           setIsPremium(false);
         }
         setLoading(false);
       });
     } catch {
-      // Firebase 미설정 시 로딩 해제, 비로그인 상태로 진행
       setLoading(false);
     }
     return () => unsubscribe();

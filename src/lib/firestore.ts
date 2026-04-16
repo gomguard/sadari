@@ -437,3 +437,27 @@ export async function deleteUserProfile(uid: string): Promise<void> {
   const ref = doc(db, "users", uid);
   await deleteDoc(ref);
 }
+
+// ============================================================
+// 관리자 권한
+// ============================================================
+
+/** 관리자 지정 */
+export async function setAdminRole(uid: string): Promise<void> {
+  const ref = doc(db, "users", uid);
+  await updateDoc(ref, { isAdmin: true });
+}
+
+/** 관리자 해제 */
+export async function removeAdminRole(uid: string): Promise<void> {
+  const ref = doc(db, "users", uid);
+  await updateDoc(ref, { isAdmin: false });
+}
+
+/** 관리자 여부 확인 */
+export async function isAdmin(uid: string): Promise<boolean> {
+  const ref = doc(db, "users", uid);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return false;
+  return snap.data()?.isAdmin === true;
+}

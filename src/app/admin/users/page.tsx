@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, ShieldOff, ShieldCheck, UserX } from "lucide-react";
+import { Search, ShieldOff, ShieldCheck, UserX, Crown, Copy } from "lucide-react";
 import {
   getAllUsers,
   suspendUser,
   unsuspendUser,
   deleteUserProfile,
   getPosts,
+  setAdminRole,
+  removeAdminRole,
   type FirestoreUserProfile,
 } from "@/lib/firestore";
 import { Timestamp } from "firebase/firestore";
@@ -15,6 +17,7 @@ import { Timestamp } from "firebase/firestore";
 interface UserWithPostCount extends FirestoreUserProfile {
   postCount: number;
   suspended?: boolean;
+  isAdmin?: boolean;
 }
 
 export default function UsersAdmin() {
@@ -48,6 +51,7 @@ export default function UsersAdmin() {
         ...u,
         postCount: postCountMap[u.nickname] || 0,
         suspended: (u as unknown as Record<string, unknown>).suspended === true,
+        isAdmin: (u as unknown as Record<string, unknown>).isAdmin === true,
       }));
 
       setUsers(usersWithCounts);
@@ -108,6 +112,37 @@ export default function UsersAdmin() {
       console.error("Failed to delete user:", err);
       setError("탈퇴 처리에 실패했습니다.");
     }
+  }
+
+  async function handleToggleAdmin(uid: string) {
+    const user = users.find((u) => u.uid === uid);
+    if (!user) return;
+
+    if (user.isAdmin) {
+      if (!confirm(`${user.nickname}의 관리자 권한을 해제하시겠습니까?`)) return;
+      try {
+        await removeAdminRole(uid);
+        setUsers((prev) =>
+          prev.map((u) => (u.uid === uid ? { ...u, isAdmin: false } : u))
+        );
+      } catch {
+        setError("관리자 해제에 실패했습니다.");
+      }
+    } else {
+      if (!confirm(`${user.nickname}을(를) 관리자로 지정하시겠습니까?`)) return;
+      try {
+        await setAdminRole(uid);
+        setUsers((prev) =>
+          prev.map((u) => (u.uid === uid ? { ...u, isAdmin: true } : u))
+        );
+      } catch {
+        setError("관리자 지정에 실패했습니다.");
+      }
+    }
+  }
+
+  function copyUid(uid: string) {
+    navigator.clipboard.writeText(uid);
   }
 
   function formatDate(ts: Timestamp | undefined): string {
@@ -190,6 +225,7 @@ export default function UsersAdmin() {
                 <tr className="border-b border-gray-100 bg-gray-50 text-xs text-gray-500">
                   <th className="px-5 py-3 font-medium">프로필</th>
                   <th className="px-5 py-3 font-medium">닉네임</th>
+                  <th className="px-5 py-3 font-medium">UID</th>
                   <th className="px-5 py-3 font-medium">연락처</th>
                   <th className="px-5 py-3 font-medium">관심섹터</th>
                   <th className="px-5 py-3 font-medium">가입일</th>
@@ -217,12 +253,27 @@ export default function UsersAdmin() {
                         <span className="font-medium text-gray-900">
                           {user.nickname}
                         </span>
+                        {user.isAdmin && (
+                          <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                            관리자
+                          </span>
+                        )}
                         {user.suspended && (
                           <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-600">
                             정지
                           </span>
                         )}
                       </div>
+                    </td>
+                    <td className="px-5 py-3">
+                      <button
+                        onClick={() => copyUid(user.uid)}
+                        className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-gray-600"
+                        title="UID 복사"
+                      >
+                        <span className="max-w-[80px] truncate font-mono">{user.uid}</span>
+                        <Copy className="h-3 w-3" />
+                      </button>
                     </td>
                     <td className="px-5 py-3 text-gray-600">
                       {user.contact || "-"}
@@ -252,15 +303,24 @@ export default function UsersAdmin() {
                     <td className="px-5 py-3">
                       <div className="flex items-center justify-center gap-1">
                         <button
+                          onClick={() => handleToggleAdmin(user.uid)}
+                          className={`rounded-lg p-2 transition-colors ${
+                            user.isAdmin
+                              ? "text-amber-500 hover:bg-amber-50"
+                              : "text-gray-300 hover:bg-amber-50 hover:text-amber-500"
+                          }`}
+                          title={user.isAdmin ? "관리자 해제" : "관리자 지정"}
+                        >
+                          <Crown className="h-4 w-4" />
+                        </button>
+                        <button
                           onClick={() => handleSuspend(user.uid)}
                           className={`rounded-lg p-2 transition-colors ${
                             user.suspended
                               ? "text-green-500 hover:bg-green-50"
                               : "text-amber-500 hover:bg-amber-50"
                           }`}
-                          title={
-                            user.suspended ? "정지 해제" : "회원 정지"
-                          }
+                          title={user.suspended ? "정지 해제" : "회원 정지"}
                         >
                           {user.suspended ? (
                             <ShieldCheck className="h-4 w-4" />

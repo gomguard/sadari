@@ -183,16 +183,16 @@ export default function MyPage() {
             />
           </div>
 
-          {/* 연락처 */}
+          {/* 전화번호 */}
           <div className="mb-4">
             <label className="mb-1.5 block text-xs font-medium text-gray-500">
-              연락처 (이메일 또는 전화번호)
+              전화번호
             </label>
             <input
-              type="text"
+              type="tel"
               value={contact}
               onChange={(e) => setContact(e.target.value)}
-              placeholder="이메일 또는 전화번호"
+              placeholder="010-0000-0000"
               className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 outline-none transition-colors focus:border-gray-400 focus:bg-white"
             />
           </div>
