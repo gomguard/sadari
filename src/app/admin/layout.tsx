@@ -9,6 +9,7 @@ import {
   BookOpen,
   MessageSquare,
   ArrowLeft,
+  Database,
 } from "lucide-react";
 
 const navItems = [
@@ -17,6 +18,7 @@ const navItems = [
   { href: "/admin/daily", label: "데일리 매크로", icon: Newspaper },
   { href: "/admin/articles", label: "웹진 아티클", icon: BookOpen },
   { href: "/admin/community", label: "커뮤니티 관리", icon: MessageSquare },
+  { href: "/admin/seed", label: "샘플 데이터 시딩", icon: Database },
 ];
 
 export default function AdminLayout({
