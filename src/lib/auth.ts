@@ -48,7 +48,6 @@ export async function signInWithKakao() {
   provider.addScope("openid");
   provider.addScope("profile_nickname");
   provider.addScope("profile_image");
-  provider.addScope("account_email");
 
   try {
     const result = await signInWithPopup(auth, provider);
