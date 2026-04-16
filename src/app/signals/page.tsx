@@ -1,7 +1,7 @@
 import { BarChart3, Filter, CheckCircle2, XCircle, Clock } from "lucide-react";
-import SignalTracker, {
-  TrackedSignal,
-} from "@/components/ui/SignalTracker";
+import LiveSignalTracker, {
+  SignalInfo,
+} from "@/components/ui/LiveSignalTracker";
 import PerformanceSummary, {
   Performance,
 } from "@/components/ui/PerformanceSummary";
@@ -17,83 +17,90 @@ const performance: Performance = {
   period: "2025년 1월 ~ 현재",
 };
 
-const signals: TrackedSignal[] = [
+const signals: SignalInfo[] = [
   {
     id: "1",
     stockName: "대봉엘에스",
+    ticker: "078140",
     entryPrice: 13400,
     targetPrice: 15000,
     stopLoss: 12500,
-    currentPrice: 14200,
     status: "active",
     date: "01.07",
     sector: "바이오",
+    memo: "비만치료제 관련, 차트 자리 좋음",
   },
   {
     id: "2",
     stockName: "본느",
+    ticker: "417790",
     entryPrice: 1315,
     targetPrice: 1600,
     stopLoss: 1250,
-    currentPrice: 1420,
     status: "active",
     date: "01.06",
     sector: "화장품",
+    memo: "마녀공장 M&A 낙수효과, 1,315 손절",
   },
   {
     id: "3",
     stockName: "현대로템",
+    ticker: "064350",
     entryPrice: 45000,
     targetPrice: 54000,
     stopLoss: 42000,
-    currentPrice: 54000,
     status: "hit_target",
     date: "01.03",
     sector: "방산",
+    memo: "20% 수익 마감",
   },
   {
     id: "4",
     stockName: "코오롱 모빌리티",
+    ticker: "002020",
     entryPrice: 2475,
     targetPrice: 3000,
     stopLoss: 2400,
-    currentPrice: 2680,
     status: "holding",
     date: "01.03",
     sector: "정치테마",
+    memo: "우원식 관련주, 2,475 손절",
   },
   {
     id: "5",
     stockName: "유한양행",
+    ticker: "000100",
     entryPrice: 85000,
     targetPrice: 100000,
     stopLoss: 80000,
-    currentPrice: 92000,
     status: "active",
     date: "01.03",
     sector: "바이오",
+    memo: "불확실성 해소, 분할매수 추천",
   },
   {
     id: "6",
     stockName: "LS ELECTRIC",
+    ticker: "010120",
     entryPrice: 161500,
     targetPrice: 185000,
     stopLoss: 155000,
-    currentPrice: 172000,
     status: "holding",
     date: "01.02",
     sector: "변압기",
+    memo: "변압기 섹터, 초보자 상승 후 진입 비추",
   },
   {
     id: "7",
     stockName: "한미약품",
+    ticker: "128940",
     entryPrice: 320000,
     targetPrice: 370000,
     stopLoss: 305000,
-    currentPrice: 335000,
     status: "active",
     date: "01.02",
     sector: "바이오",
+    memo: "바이오 중 흑자 종목",
   },
 ];
 
@@ -178,10 +185,14 @@ export default function SignalsPage() {
         </p>
       </div>
 
-      {/* Signal Tracker Cards */}
+      {/* Signal Tracker Cards — 실시간 API 연동 */}
+      <div className="mx-5 mt-2 flex items-center gap-1.5 text-[10px] text-gray-400">
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+        실시간 시세 · 1분마다 갱신
+      </div>
       <div className="space-y-3 px-5 py-4">
         {signals.map((signal) => (
-          <SignalTracker key={signal.id} signal={signal} />
+          <LiveSignalTracker key={signal.id} signal={signal} />
         ))}
       </div>
 

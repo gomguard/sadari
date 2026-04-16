@@ -10,9 +10,10 @@ import {
   Users,
   Bell,
 } from "lucide-react";
-import SignalTracker, {
-  TrackedSignal,
-} from "@/components/ui/SignalTracker";
+import LiveSignalTracker, {
+  SignalInfo,
+} from "@/components/ui/LiveSignalTracker";
+import LiveMarketData from "@/components/ui/LiveMarketData";
 import HaseulInsight from "@/components/ui/HaseulInsight";
 import SectorHeatmap, { SectorData } from "@/components/ui/SectorHeatmap";
 import TodayAction, { ActionItem } from "@/components/ui/TodayAction";
@@ -68,25 +69,26 @@ const sectorData: SectorData[] = [
   { name: "2차전지", status: "cold", change: "-1.8%", note: "적자 지속, 비추" },
 ];
 
-const latestSignals: TrackedSignal[] = [
+const latestSignals: SignalInfo[] = [
   {
     id: "1",
     stockName: "대봉엘에스",
+    ticker: "078140",
     entryPrice: 13400,
     targetPrice: 15000,
     stopLoss: 12500,
-    currentPrice: 14200,
     status: "active",
     date: "01.07",
     sector: "바이오",
+    memo: "비만치료제 관련, 차트 자리 좋음",
   },
   {
     id: "2",
     stockName: "현대로템",
+    ticker: "064350",
     entryPrice: 45000,
     targetPrice: 54000,
     stopLoss: 42000,
-    currentPrice: 54000,
     status: "hit_target",
     date: "01.03",
     sector: "방산",
@@ -193,6 +195,11 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* 실시간 시세 — API 연동 */}
+      <section className="px-5 py-3">
+        <LiveMarketData />
+      </section>
+
       {/* 섹터 온도계 — 증권사 앱에 없는 직관적 시각화 */}
       <section className="px-5 py-3">
         <SectorHeatmap sectors={sectorData} />
@@ -203,12 +210,13 @@ export default function HomePage() {
         <PerformanceSummary perf={performance} />
       </section>
 
-      {/* 실시간 시그널 트래커 */}
+      {/* 실시간 시그널 트래커 — API 연동 */}
       <section className="px-5 py-3">
         <SectionHeader title="시그널 트래커" href="/signals" icon={BarChart3} />
+        <p className="mt-1 text-[10px] text-gray-400">1분마다 실시간 갱신</p>
         <div className="mt-2 space-y-3">
           {latestSignals.map((s) => (
-            <SignalTracker key={s.id} signal={s} />
+            <LiveSignalTracker key={s.id} signal={s} />
           ))}
         </div>
       </section>
