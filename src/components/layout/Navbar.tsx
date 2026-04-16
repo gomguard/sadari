@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Newspaper, BookOpen, BarChart3 } from "lucide-react";
+import { Home, Newspaper, MessageSquare, BookOpen, BarChart3 } from "lucide-react";
 
 const tabs = [
   { href: "/", label: "홈", icon: Home },
   { href: "/feed", label: "피드", icon: Newspaper },
+  { href: "/community", label: "커뮤니티", icon: MessageSquare },
   { href: "/webzine", label: "웹진", icon: BookOpen },
   { href: "/signals", label: "시그널", icon: BarChart3 },
 ];

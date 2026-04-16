@@ -236,3 +236,129 @@ export async function getArticleById(
   if (!snap.exists()) return null;
   return { id: snap.id, ...snap.data() } as FirestoreArticle;
 }
+
+// ============================================================
+// 커뮤니티 게시판 (Community Board)
+// ============================================================
+
+export interface FirestoreCommunityPost {
+  id?: string;
+  nickname: string;
+  title: string;
+  content: string;
+  category: "자유" | "질문" | "종목토론" | "수익인증";
+  likes: number;
+  commentCount: number;
+  createdAt: Timestamp;
+}
+
+export interface FirestoreCommunityComment {
+  id?: string;
+  postId: string;
+  nickname: string;
+  content: string;
+  likes: number;
+  createdAt: Timestamp;
+}
+
+const postsCol = collection(db, "communityPosts");
+const commentsCol = collection(db, "communityComments");
+
+/** 게시글 추가 */
+export async function addPost(
+  data: Omit<FirestoreCommunityPost, "id" | "createdAt" | "likes" | "commentCount">
+): Promise<string> {
+  const docRef = await addDoc(postsCol, {
+    ...data,
+    likes: 0,
+    commentCount: 0,
+    createdAt: serverTimestamp(),
+  });
+  return docRef.id;
+}
+
+/** 게시글 목록 조회 (최신순, 카테고리 필터·limit 지원) */
+export async function getPosts(
+  category?: string,
+  count?: number
+): Promise<FirestoreCommunityPost[]> {
+  const constraints = [orderBy("createdAt", "desc")] as Parameters<typeof query>[1][];
+  if (category) constraints.push(where("category", "==", category));
+  if (count) constraints.push(firestoreLimit(count));
+
+  const q = query(postsCol, ...constraints);
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as FirestoreCommunityPost);
+}
+
+/** 단일 게시글 조회 */
+export async function getPostById(
+  id: string
+): Promise<FirestoreCommunityPost | null> {
+  const ref = doc(db, "communityPosts", id);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+  return { id: snap.id, ...snap.data() } as FirestoreCommunityPost;
+}
+
+/** 게시글 삭제 */
+export async function deletePost(id: string): Promise<void> {
+  const ref = doc(db, "communityPosts", id);
+  await deleteDoc(ref);
+}
+
+/** 게시글 좋아요 (increment) */
+export async function likePost(id: string): Promise<void> {
+  const ref = doc(db, "communityPosts", id);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const current = snap.data().likes ?? 0;
+  await updateDoc(ref, { likes: current + 1 });
+}
+
+/** 댓글 추가 */
+export async function addComment(
+  data: Omit<FirestoreCommunityComment, "id" | "createdAt" | "likes">
+): Promise<string> {
+  const docRef = await addDoc(commentsCol, {
+    ...data,
+    likes: 0,
+    createdAt: serverTimestamp(),
+  });
+  // increment commentCount on the post
+  const postRef = doc(db, "communityPosts", data.postId);
+  const postSnap = await getDoc(postRef);
+  if (postSnap.exists()) {
+    const current = postSnap.data().commentCount ?? 0;
+    await updateDoc(postRef, { commentCount: current + 1 });
+  }
+  return docRef.id;
+}
+
+/** 댓글 목록 조회 (오래된순) */
+export async function getComments(
+  postId: string
+): Promise<FirestoreCommunityComment[]> {
+  const q = query(
+    commentsCol,
+    where("postId", "==", postId),
+    orderBy("createdAt", "asc")
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as FirestoreCommunityComment);
+}
+
+/** 댓글 삭제 */
+export async function deleteComment(id: string): Promise<void> {
+  const ref = doc(db, "communityComments", id);
+  await deleteDoc(ref);
+}
+
+/** 댓글 좋아요 (increment) */
+export async function likeComment(id: string): Promise<void> {
+  const ref = doc(db, "communityComments", id);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const current = snap.data().likes ?? 0;
+  await updateDoc(ref, { likes: current + 1 });
+}
